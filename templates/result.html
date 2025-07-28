@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prediction Result</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(to right, #e0f7fa, #f8f9fa);
+      font-family: 'Poppins', sans-serif;
+    }
+    .result-box {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      margin-top: 50px;
+    }
+    .result-image {
+      width: 100%;
+      border-radius: 10px;
+      object-fit: cover;
+    }
+    .badge-symptom {
+      background-color: #0d6efd;
+      color: white;
+      margin: 5px;
+      padding: 10px 15px;
+      border-radius: 50px;
+      font-size: 14px;
+    }
+    .footer {
+      margin-top: 60px;
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="result-box text-center">
+    <h2><i class="fas fa-user-md"></i> Hello, {{ name }}!</h2>
+    <p class="lead">Based on your symptoms, here are the top predicted diseases:</p>
+
+    <h5 class="text-primary mt-4"><i class="fas fa-symptoms"></i> Your Selected Symptoms:</h5>
+    <div class="d-flex flex-wrap justify-content-center mb-4">
+      {% for s in selected_symptoms %}
+        <span class="badge-symptom">{{ s }}</span>
+      {% endfor %}
+    </div>
+
+    {% for disease in top_diseases %}
+      <hr class="my-4">
+      <h3 class="text-success"><i class="fas fa-diagnoses"></i> {{ disease.name }}</h3>
+
+      <img src="https://source.unsplash.com/900x300/?health,{{ disease.name }}" alt="Image" class="result-image mb-3">
+
+      <h5 class="text-primary"><i class="fas fa-info-circle"></i> Description:</h5>
+      <p>{{ disease.description }}</p>
+
+      <h5 class="text-primary"><i class="fas fa-notes-medical"></i> Recommended Precautions:</h5>
+      {% if disease.precautions %}
+        <ul class="list-group precaution-list text-start mx-auto" style="max-width: 600px;">
+          {% for item in disease.precautions %}
+            <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i> {{ item }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted">No precautions available.</p>
+      {% endif %}
+    {% endfor %}
+
+    <a href="/" class="btn btn-outline-primary mt-4">
+      <i class="fas fa-arrow-left"></i> Go Back
+    </a>
+  </div>
+</div>
+
+<div class="footer">
+  Made by Naman Bhardwaj | This tool is not a replacement for professional diagnosis.
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
