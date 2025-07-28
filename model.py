@@ -1,32 +1,33 @@
 import pandas as pd
 import numpy as np
-import joblib
-from sklearn.ensemble import RandomForestClassifier
+import os
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+import joblib
 
-# Load datasets
-symptom_severity = pd.read_csv("Symptom-severity.csv")
-precautions = pd.read_excel("symptom_precaution (1).xlsx")
-descriptions = pd.read_excel("symptom_Description.xlsx")
+# Get base directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Create disease_info dictionary
+# Load data
+symptom_severity = pd.read_csv(os.path.join(BASE_DIR, "Symptom-severity.csv"))
+precautions = pd.read_excel(os.path.join(BASE_DIR, "symptom_precaution (1).xlsx"))
+descriptions = pd.read_excel(os.path.join(BASE_DIR, "symptom_Description.xlsx"))
+
+# Combine description and precautions
 disease_info = {}
 for _, row in descriptions.iterrows():
     disease = row['Disease']
     description = row['Description']
-    
+
+    # Match precaution row for this disease
     prec_row = precautions[precautions['Disease'] == disease]
-    if not prec_row.empty:
-        prec_row = prec_row.iloc[0]
-        disease_precautions = [
-            prec_row[f'Precaution_{i}']
-            for i in range(1, 5)
-            if pd.notna(prec_row[f'Precaution_{i}'])
-        ]
-    else:
-        disease_precautions = ["No precautions available"]
-    
+
+    #  FIX: Extract actual string values, not Series
+    disease_precautions = [
+        prec_row.iloc[0][f'Precaution_{i}'] for i in range(1, 5)
+        if not prec_row.empty and pd.notna(prec_row.iloc[0][f'Precaution_{i}'])
+    ]
+
     disease_info[disease] = {
         'description': description,
         'precautions': disease_precautions
@@ -38,41 +39,33 @@ for disease in disease_info.keys():
     num_symptoms = np.random.randint(3, 8)
     symptoms = symptom_severity.sample(num_symptoms)['Symptom'].tolist()
     row = {'Disease': disease}
-    for i in range(1, len(symptoms)+1):
-        row[f'Symptom_{i}'] = symptoms[i-1]
+    for i, symptom in enumerate(symptoms, 1):
+        row[f"Symptom_{i}"] = symptom
     synthetic_data.append(row)
 
+# Create DataFrame
 df = pd.DataFrame(synthetic_data)
+symptom_cols = [col for col in df.columns if col.startswith("Symptom")]
+all_symptoms = sorted({s for val in df[symptom_cols].values.flatten() if pd.notna(s := val)})
 
-symptom_columns = [col for col in df.columns if col.startswith("Symptom")]
-label_column = "Disease"
-
-# Get unique symptoms
-all_symptoms = pd.unique(df[symptom_columns].values.ravel())
-all_symptoms = sorted([s for s in all_symptoms if pd.notna(s)])
-
-# Encode symptoms into binary vector
+# Encode symptoms into binary format
 def encode_symptoms(row):
-    row_symptoms = set(row[symptom_columns])
-    return [1 if symptom in row_symptoms else 0 for symptom in all_symptoms]
+    return [1 if s in row.values else 0 for s in all_symptoms]
 
-X = df.apply(encode_symptoms, axis=1, result_type='expand')
+X = df[symptom_cols].apply(encode_symptoms, axis=1, result_type='expand')
 X.columns = all_symptoms
-y = df[label_column]
-
-# Label encode disease names
+y = df['Disease']
 le = LabelEncoder()
 y_encoded = le.fit_transform(y)
 
-# Train-test split and model training
-X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42)
+# Train model
 model = RandomForestClassifier()
-model.fit(X_train, y_train)
+model.fit(X, y_encoded)
 
-# Save model and related files
-joblib.dump(model, "model.pkl")
-joblib.dump(all_symptoms, "symptom_list.pkl")
-joblib.dump(le, "label_encoder.pkl")
-joblib.dump(disease_info, "disease_info.pkl")
+# Save all files
+joblib.dump(model, os.path.join(BASE_DIR, "model.pkl"))
+joblib.dump(all_symptoms, os.path.join(BASE_DIR, "symptom_list.pkl"))
+joblib.dump(le, os.path.join(BASE_DIR, "label_encoder.pkl"))
+joblib.dump(disease_info, os.path.join(BASE_DIR, "disease_info.pkl"))
 
-print("✅ Model and data saved successfully.")
+print("Model training complete. Files saved.")
